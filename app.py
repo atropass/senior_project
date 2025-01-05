@@ -97,9 +97,4 @@ def analyze():
 
 init_model()
 if __name__ == "__main__":
-    # This block only runs when you do `python app.py`
     app.run(debug=True)
-else:
-    # For production deployment - model already initialized above
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)

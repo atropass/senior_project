@@ -3,9 +3,7 @@ services:
     name: kazakh-pronunciation-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app:app -c gunicorn.conf.py
     envVars:
-      - key: PORT
-        value: 10000
       - key: PYTHON_VERSION
         value: 3.10.15
