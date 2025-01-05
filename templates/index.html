@@ -86,6 +86,44 @@
             background-color: #e74c3c !important;
         }
 
+        .metrics-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .metric-card {
+            background: #fff;
+            padding: 8px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .metric-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .feedback-section {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .feedback-item {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-left: 3px solid #3498db;
+        }
+
         @keyframes pulse {
             0% {
                 opacity: 1;
@@ -99,6 +137,49 @@
                 opacity: 1;
             }
         }
+
+        .phoneme-detail {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+
+        .phoneme-detail.correct {
+            border-left: 3px solid #27ae60;
+        }
+
+        .phoneme-detail.incorrect {
+            border-left: 3px solid #e74c3c;
+        }
+
+        .phoneme {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .similarity {
+            color: #7f8c8d;
+        }
+
+        .feedback-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .feedback-item {
+            margin: 8px 0;
+            padding: 5px 10px;
+            border-left: 3px solid #3498db;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #ecf0
     </style>
 </head>
 
@@ -122,8 +203,11 @@
             </div>
 
             <div class="result" id="result-{{ loop.index0 }}" style="display: none;">
+                <div id="score-{{ loop.index0 }}"></div>
                 <div id="accuracy-{{ loop.index0 }}"></div>
+                <div id="feedback-{{ loop.index0 }}"></div>
                 <div id="details-{{ loop.index0 }}"></div>
+                <div id="metrics-{{ loop.index0 }}"></div>
             </div>
         </div>
         {% endfor %}
@@ -194,27 +278,97 @@
 
         function displayResults(data, wordIndex) {
             const resultDiv = document.getElementById(`result-${wordIndex}`);
+            const scoreDiv = document.getElementById(`score-${wordIndex}`);
             const accuracyDiv = document.getElementById(`accuracy-${wordIndex}`);
+            const feedbackDiv = document.getElementById(`feedback-${wordIndex}`);
             const detailsDiv = document.getElementById(`details-${wordIndex}`);
+            const metricsDiv = document.getElementById(`metrics-${wordIndex}`);
 
             resultDiv.style.display = 'block';
 
-            const accuracy = ((data.analysis.correct_phonemes / data.analysis.total_phonemes) * 100).toFixed(2);
+            // Overall Score with color coding
+            const scoreColor = data.pronunciation_score >= 90 ? '#27ae60' :
+                data.pronunciation_score >= 80 ? '#2ecc71' :
+                    data.pronunciation_score >= 70 ? '#f1c40f' : '#e74c3c';
 
+            scoreDiv.innerHTML = `
+        <h3 style="color: ${scoreColor}">Overall Score: ${data.pronunciation_score.toFixed(1)}%</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: ${data.pronunciation_score}%; background-color: ${scoreColor}"></div>
+        </div>
+    `;
+
+            // Basic Information
             accuracyDiv.innerHTML = `
-                <strong>Pronunciation Accuracy:</strong> ${accuracy}%<br>
-                <strong>Your pronunciation:</strong> ${data.predicted_text}<br>
-                <strong>Correct word:</strong> ${data.reference_text}
-            `;
+        <strong>Pronunciation Accuracy:</strong> ${data.phoneme_analysis.accuracy.toFixed(2)}%<br>
+        <strong>Your pronunciation:</strong> ${data.predicted_text}<br>
+        <strong>Correct word:</strong> ${data.reference_text}
+    `;
 
-            const detailsHtml = data.analysis.phoneme_details.map(detail =>
-                `<span class="${detail.correct ? 'correct' : 'incorrect'}">
-                    ${detail.phoneme} (${detail.ipa}) ${detail.correct ? '✓' : '✗'}
-                </span>`
-            ).join(' ');
+            // Detailed Phoneme Analysis
+            let detailsHtml = '<div class="feedback-section"><h4>Phoneme Analysis:</h4>';
+            data.phoneme_analysis.phoneme_details.forEach(detail => {
+                let phonemeClass = detail.correct ? 'correct' : 'incorrect';
+                let extraInfo = '';
 
-            detailsDiv.innerHTML = `<strong>Phoneme Details:</strong><br>${detailsHtml}`;
-        }
+                if (!detail.correct) {
+                    if (detail.predicted_as) {
+                        extraInfo = `<br>Pronounced as: ${detail.predicted_as}`;
+                        if (detail.similar_to && detail.similar_to.length > 0) {
+                            extraInfo += `<br>Similar acceptable sounds: ${detail.similar_to.join(', ')}`;
+                        }
+                    } else if (detail.error) {
+                        extraInfo = '<br>Sound was omitted';
+                    } else if (detail.extra) {
+                        extraInfo = `<br>Extra sound added`;
+                    }
+                }
+
+                detailsHtml += `
+            <div class="phoneme-detail ${phonemeClass}">
+                <span class="phoneme">${detail.phoneme}</span>
+                <span class="similarity">${detail.similarity ? (detail.similarity * 100).toFixed(0) + '%' : 'N/A'}</span>
+                ${extraInfo}
+            </div>
+        `;
+            });
+            detailsHtml += '</div>';
+            detailsDiv.innerHTML = detailsHtml;
+
+            // Feedback Section
+            const feedbackHtml = data.detailed_feedback.map(feedback =>
+                `<div class="feedback-item">${feedback}</div>`
+            ).join('');
+            feedbackDiv.innerHTML = `
+        <div class="feedback-section">
+            <h4>Feedback:</h4>
+            ${feedbackHtml}
+        </div>
+    `;
+
+            // Metrics Section
+            metricsDiv.innerHTML = `
+        <div class="metrics-section">
+            <div class="metric-card">
+                <div class="metric-label">Confidence Score</div>
+                <div class="metric-value">${(data.confidence * 100).toFixed(1)}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Speech Rate</div>
+                <div class="metric-value">${data.rhythm_metrics.speech_rate.toFixed(1)} syl/s</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Rhythm Score</div>
+                <div class="metric-value">${(100 - data.rhythm_metrics.rhythm_regularity * 100).toFixed(1)}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Timing Score</div>
+                <div class="metric-value">${(data.timing_scores.timing_score * 100).toFixed(1)}%</div>
+            </div>
+        </div>
+    `;
+        }        // Overall Score
+
     </script>
 </body>
 
