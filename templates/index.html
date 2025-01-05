@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Kazakh Language Pronunciation Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .phonetic {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .translation {
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+
+        .correct {
+            color: #27ae60;
+        }
+
+        .incorrect {
+            color: #c0392b;
+        }
+
+        .recording {
+            animation: pulse 1.5s infinite;
+            background-color: #e74c3c !important;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Kazakh Language Pronunciation Practice</h1>
+
+    <div class="cards-container">
+        {% for word in words %}
+        <div class="card" id="card-{{ loop.index0 }}">
+            <h3>{{ word.word }}</h3>
+            <div class="phonetic">[{{ word.phonetic }}]</div>
+            <div class="translation">{{ word.translation }}</div>
+
+            <div class="controls">
+                <button onclick="startRecording({{ loop.index0 }})" id="record-{{ loop.index0 }}">
+                    Start Recording
+                </button>
+                <button onclick="stopRecording({{ loop.index0 }})" id="stop-{{ loop.index0 }}" disabled>
+                    Stop Recording
+                </button>
+            </div>
+
+            <div class="result" id="result-{{ loop.index0 }}" style="display: none;">
+                <div id="accuracy-{{ loop.index0 }}"></div>
+                <div id="details-{{ loop.index0 }}"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let currentWordIndex = null;
+
+        async function startRecording(wordIndex) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                currentWordIndex = wordIndex;
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await sendAudioForAnalysis(audioBlob, wordIndex);
+                };
+
+                mediaRecorder.start();
+                document.getElementById(`record-${wordIndex}`).disabled = true;
+                document.getElementById(`record-${wordIndex}`).classList.add('recording');
+                document.getElementById(`stop-${wordIndex}`).disabled = false;
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                alert('Error accessing microphone. Please ensure you have granted microphone permissions.');
+            }
+        }
+
+        function stopRecording(wordIndex) {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                document.getElementById(`record-${wordIndex}`).disabled = false;
+                document.getElementById(`record-${wordIndex}`).classList.remove('recording');
+                document.getElementById(`stop-${wordIndex}`).disabled = true;
+            }
+        }
+
+        async function sendAudioForAnalysis(audioBlob, wordIndex) {
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+            formData.append('word_index', wordIndex);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayResults(data, wordIndex);
+                } else {
+                    alert(data.error || 'An error occurred');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while analyzing the audio');
+            }
+        }
+
+        function displayResults(data, wordIndex) {
+            const resultDiv = document.getElementById(`result-${wordIndex}`);
+            const accuracyDiv = document.getElementById(`accuracy-${wordIndex}`);
+            const detailsDiv = document.getElementById(`details-${wordIndex}`);
+
+            resultDiv.style.display = 'block';
+
+            const accuracy = ((data.analysis.correct_phonemes / data.analysis.total_phonemes) * 100).toFixed(2);
+
+            accuracyDiv.innerHTML = `
+                <strong>Pronunciation Accuracy:</strong> ${accuracy}%<br>
+                <strong>Your pronunciation:</strong> ${data.predicted_text}<br>
+                <strong>Correct word:</strong> ${data.reference_text}
+            `;
+
+            const detailsHtml = data.analysis.phoneme_details.map(detail =>
+                `<span class="${detail.correct ? 'correct' : 'incorrect'}">
+                    ${detail.phoneme} (${detail.ipa}) ${detail.correct ? '✓' : '✗'}
+                </span>`
+            ).join(' ');
+
+            detailsDiv.innerHTML = `<strong>Phoneme Details:</strong><br>${detailsHtml}`;
+        }
+    </script>
+</body>
+
+</html>
