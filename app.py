@@ -4,8 +4,10 @@ from script import analyze_phoneme_accuracy
 from transformers import pipeline
 from pronunciation_analysis import setup_analyzer
 import librosa
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 model_name = "adilism/wav2vec2-large-xlsr-kazakh"
 asr_pipeline = None
@@ -34,6 +36,11 @@ def init_model():
 @app.route("/")
 def index():
     return render_template("index.html", words=KAZAKH_WORDS)
+
+
+@app.route("/health")
+def health_check():
+    return jsonify({"status": "ok"})
 
 
 @app.route("/analyze", methods=["POST"])
