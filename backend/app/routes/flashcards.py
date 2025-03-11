@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app import db
 from sqlalchemy.exc import IntegrityError
 from app.models.flashcards import Flashcard
+from app.routes.word_categories import get_flashcards_by_category
 
 flashcards_bp = Blueprint('flashcards', __name__)
 
@@ -99,3 +100,7 @@ def delete_flashcard(word_id):
     db.session.delete(flashcard)
     db.session.commit()
     return jsonify({'message': 'Flashcard deleted successfully'}), 200
+
+@flashcards_bp.route("/categories/<int:category_id>", methods=['GET'])
+def get_flashcards_by_category_alias(category_id):
+    return get_flashcards_by_category(category_id)

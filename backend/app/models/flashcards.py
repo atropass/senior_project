@@ -1,4 +1,6 @@
 from app import db
+from app.models.associations import flashcard_categories
+from app.models.category import Category
 
 class Flashcard(db.Model):
     __tablename__ = 'flashcards'
@@ -12,6 +14,8 @@ class Flashcard(db.Model):
     rus_translation = db.Column(db.String(64))
     phonetic = db.Column(db.String(64), nullable=False)
     audio = db.Column(db.String(256), nullable=False, default='default.wav')
+
+    categories = db.relationship('Category', secondary=flashcard_categories, backref=db.backref('flashcards', lazy='dynamic'))
 
     
     def __init__(self, word, eng_translation, rus_translation, phonetic):
@@ -35,6 +39,7 @@ class Flashcard(db.Model):
         return {
             'word_id': self.word_id,
             'word': self.word,
+            'categories': [category.name for category in self.categories],
             'picture': self.picture,
             'eng_translation': self.eng_translation,
             'rus_translation': self.rus_translation,
