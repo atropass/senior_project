@@ -174,12 +174,15 @@ class PronunciationAnalyzer:
                 )
             analysis["accuracy"] = 100.0
             return analysis
+        
+        print(matrix)
 
-        for op in matrix:
-            if op[0] == "equal":
+        analysis['correct_phonemes'] = len(ref_text) - len(matrix)
+        for op, i, j in matrix:
+            if op == "equal":
                 # Exact match
                 phoneme = ref_text[i]
-                analysis["correct_phonemes"] += 1
+                # analysis["correct_phonemes"] += 1
                 analysis["phoneme_details"].append(
                     {
                         "phoneme": phoneme,
@@ -188,9 +191,9 @@ class PronunciationAnalyzer:
                         "similar_to": [],
                     }
                 )
-                i += 1
-                j += 1
-            elif op[0] == "replace":
+                # i += 1
+                # j += 1
+            elif op == "replace":
                 # Substitution
                 ref_phoneme = ref_text[i]
                 pred_phoneme = pred_text[j]
@@ -207,9 +210,9 @@ class PronunciationAnalyzer:
                         "similar_to": similar_sounds,
                     }
                 )
-                i += 1
-                j += 1
-            elif op[0] == "delete":
+                # i += 1
+                # j += 1
+            elif op == "delete":
                 # Deletion
                 ref_phoneme = ref_text[i]
                 analysis["phoneme_details"].append(
@@ -220,8 +223,8 @@ class PronunciationAnalyzer:
                         "error": "omitted",
                     }
                 )
-                i += 1
-            elif op[0] == "insert":
+                # i += 1
+            elif op == "insert":
                 # Insertion
                 pred_phoneme = pred_text[j]
                 analysis["phoneme_details"].append(
@@ -232,7 +235,7 @@ class PronunciationAnalyzer:
                         "extra": pred_phoneme,
                     }
                 )
-                j += 1
+                # j += 1
 
         # Calculate overall accuracy
         analysis["accuracy"] = (
