@@ -176,24 +176,14 @@ class PronunciationAnalyzer:
             return analysis
         
         print(matrix)
+        source_modified = set()
+        dest_modified = set()
 
         analysis['correct_phonemes'] = len(ref_text) - len(matrix)
         for op, i, j in matrix:
-            if op == "equal":
-                # Exact match
-                phoneme = ref_text[i]
-                # analysis["correct_phonemes"] += 1
-                analysis["phoneme_details"].append(
-                    {
-                        "phoneme": phoneme,
-                        "correct": True,
-                        "similarity": 1.0,
-                        "similar_to": [],
-                    }
-                )
-                # i += 1
-                # j += 1
-            elif op == "replace":
+            if op == "replace":
+                source_modified.add(i)
+                dest_modified.add(j)
                 # Substitution
                 ref_phoneme = ref_text[i]
                 pred_phoneme = pred_text[j]
@@ -203,6 +193,7 @@ class PronunciationAnalyzer:
                 similar_sounds = self.similar_phonemes.get(ref_phoneme, [])
                 analysis["phoneme_details"].append(
                     {
+                        'error': 'mispronounciation',
                         "phoneme": ref_phoneme,
                         "correct": False,
                         "similarity": similarity,
@@ -213,22 +204,25 @@ class PronunciationAnalyzer:
                 # i += 1
                 # j += 1
             elif op == "delete":
+                source_modified.add(i)
                 # Deletion
                 ref_phoneme = ref_text[i]
                 analysis["phoneme_details"].append(
                     {
+                        "error": "omitted",
                         "phoneme": ref_phoneme,
                         "correct": False,
                         "similarity": 0.0,
-                        "error": "omitted",
                     }
                 )
                 # i += 1
             elif op == "insert":
+                dest_modified.add(j)
                 # Insertion
                 pred_phoneme = pred_text[j]
                 analysis["phoneme_details"].append(
                     {
+                        'error': 'extra sound',
                         "phoneme": "∅",
                         "correct": False,
                         "similarity": 0.0,
@@ -236,6 +230,22 @@ class PronunciationAnalyzer:
                     }
                 )
                 # j += 1
+
+        equal_phonemes = [i for i in range(len(ref_text)) if i not in source_modified]
+        for i in equal_phonemes:
+            # Exact match
+                phoneme = ref_text[i]
+                analysis["phoneme_details"].append(
+                    {
+                        "phoneme": phoneme,
+                        "correct": True,
+                        "similarity": 1.0,
+                        "similar_to": [],
+                    }
+                )
+
+        # Need to preserve letter order
+        analysis['phoneme_details'] = sorted(analysis['phoneme_details'], key=lambda x: ref_text.index(x['phoneme']))
 
         # Calculate overall accuracy
         analysis["accuracy"] = (
