@@ -26,6 +26,7 @@ import {
   $speechAnalysisError,
   speechRecorded,
   resetSpeechAnalysis,
+  $speechAnalysisResult,
 } from "../../features/flashcards/analyze-speech";
 import { AlertCircle, ChevronLeft } from "lucide-react";
 import { FlashCard } from "../../components/flashcards/Flashcard";
@@ -46,84 +47,14 @@ const FlashcardPage: React.FC = () => {
     resetFlashcardState,
   ]);
 
-  const [
-    // speechResult
-    speechLoading,
-    speechError,
-    recordSpeech,
-    resetSpeech,
-  ] = useUnit([
-    //   $speechAnalysisResult,
-    $speechAnalysisLoading,
-    $speechAnalysisError,
-    speechRecorded,
-    resetSpeechAnalysis,
-  ]);
-
-  const speechResult = {
-    confidence: 0.9960978627204895,
-    detailed_feedback: [
-      "Good pronunciation. Some areas need work.",
-      "\nPhoneme Issues:",
-      "- 'ы' was pronounced as 'и'",
-      "  (Similar acceptable sounds: і, и)",
-      "\nTiming:",
-      "- Work on maintaining consistent timing between sounds",
-      "\nPace:",
-      "- Try speaking more slowly and deliberately",
-    ],
-    phoneme_analysis: {
-      accuracy: 80.0,
-      correct_phonemes: 4,
-      phoneme_details: [
-        {
-          correct: true,
-          phoneme: "ж",
-          similar_to: [],
-          similarity: 1.0,
-        },
-        {
-          correct: true,
-          phoneme: "а",
-          similar_to: [],
-          similarity: 1.0,
-        },
-        {
-          correct: true,
-          phoneme: "қ",
-          similar_to: [],
-          similarity: 1.0,
-        },
-        {
-          correct: true,
-          phoneme: "с",
-          similar_to: [],
-          similarity: 1.0,
-        },
-        {
-          correct: false,
-          error: "mispronounciation",
-          phoneme: "ы",
-          predicted_as: "и",
-          similar_to: ["і", "и"],
-          similarity: 0.5,
-        },
-      ],
-      total_phonemes: 5,
-    },
-    predicted_text: "жақси",
-    pronunciation_score: 74.3519354895569,
-    reference_text: "жақсы",
-    rhythm_metrics: {
-      rhythm_regularity: 0.16873335947051946,
-      speech_rate: 7.517550163064507,
-    },
-    timing_scores: {
-      mean_duration: 2.4888890881255468,
-      std_duration: 15.443181656194563,
-      timing_score: -1.0,
-    },
-  };
+  const [speechResult, speechLoading, speechError, recordSpeech, resetSpeech] =
+    useUnit([
+      $speechAnalysisResult,
+      $speechAnalysisLoading,
+      $speechAnalysisError,
+      speechRecorded,
+      resetSpeechAnalysis,
+    ]);
 
   // Reference to measure flashcard height
   const flashcardRef = React.useRef<HTMLDivElement>(null);

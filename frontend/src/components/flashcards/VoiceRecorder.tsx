@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ActionIcon, Text, Center, Box, Transition } from "@mantine/core";
 import { Mic, StopCircle, RefreshCw } from "lucide-react";
-import { useReactMediaRecorder } from "react-media-recorder";
+import RecordRTC, { StereoAudioRecorder } from "recordrtc";
 import { notifications } from "@mantine/notifications";
 
 export interface VoiceRecorderProps {
@@ -11,23 +11,37 @@ export interface VoiceRecorderProps {
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   onRecordingComplete,
 }) => {
-  const { status, startRecording, stopRecording, mediaBlobUrl, clearBlobUrl } =
-    useReactMediaRecorder({
-      audio: true,
-      mediaRecorderOptions: {
-        mimeType: "audio/webm",
-      },
-      onStop: (blobUrl, blob) => {
-        const audioFile = new File([blob], "recording.webm", {
-          type: "audio/webm",
-        });
+  const [status, setStatus] = useState<
+    "idle" | "recording" | "stopped" | "acquiring_media" | "recorder_error"
+  >("idle");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const recorderRef = useRef<RecordRTC | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-        onRecordingComplete(audioFile);
-      },
-    });
+  const startRecording = async () => {
+    try {
+      setStatus("acquiring_media");
 
-  useEffect(() => {
-    if (status === "recorder_error") {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // Initialize recorder with WAV format
+      const recorder = new RecordRTC(stream, {
+        type: "audio",
+        mimeType: "audio/wav",
+        recorderType: StereoAudioRecorder,
+        numberOfAudioChannels: 1, // mono
+        desiredSampRate: 16000, // 16kHz sample rate
+        disableLogs: true,
+      });
+
+      recorderRef.current = recorder;
+      recorder.startRecording();
+      setStatus("recording");
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      setStatus("recorder_error");
       notifications.show({
         title: "Microphone Error",
         message:
@@ -36,14 +50,68 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         autoClose: 5000,
       });
     }
-  }, [status]);
+  };
+
+  const stopRecording = () => {
+    if (recorderRef.current) {
+      recorderRef.current.stopRecording(() => {
+        const blob = recorderRef.current?.getBlob();
+        if (blob) {
+          // Create audio URL for preview
+          const url = URL.createObjectURL(blob);
+          setAudioUrl(url);
+
+          // Create file for submission
+          const audioFile = new File([blob], "recording.wav", {
+            type: "audio/wav",
+          });
+
+          onRecordingComplete(audioFile);
+
+          // Stop all tracks
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+          }
+
+          setStatus("stopped");
+        }
+      });
+    }
+  };
+
+  const clearRecording = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+
+    setAudioUrl(null);
+    setStatus("idle");
+
+    if (recorderRef.current) {
+      recorderRef.current.reset();
+      recorderRef.current = null;
+    }
+  };
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      if (recorderRef.current) {
+        recorderRef.current.reset();
+      }
+    };
+  }, [audioUrl]);
 
   const isRecording = status === "recording";
-  const hasRecording = mediaBlobUrl !== null && status === "stopped";
-
-  const handleReset = () => {
-    clearBlobUrl();
-  };
+  const hasRecording = audioUrl !== null && status === "stopped";
 
   return (
     <div className="flex flex-col items-center justify-between h-full">
@@ -80,7 +148,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
                   isRecording
                     ? stopRecording
                     : hasRecording
-                    ? handleReset
+                    ? clearRecording
                     : startRecording
                 }
                 disabled={status === "acquiring_media"}
@@ -109,9 +177,9 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         </Text>
       </Center>
 
-      {mediaBlobUrl && (
+      {audioUrl && (
         <Box className="w-full mt-auto pt-4">
-          <audio className="w-full" controls src={mediaBlobUrl} />
+          <audio className="w-full" controls src={audioUrl} />
         </Box>
       )}
     </div>
