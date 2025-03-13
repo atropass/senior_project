@@ -21,6 +21,8 @@ def analyze_speech():
     
     if audio_file.filename == '':
         return jsonify({'error': 'No audio file selected'}), 400
+    if audio_file and audio_file.filename.rsplit('.', 1)[1].lower() not in ['wav']:
+        return jsonify({'error': 'Unsupported file type. Please upload a .wav file'}), 400
     
     try:
         result = analyze_audio(audio_file, reference_text)

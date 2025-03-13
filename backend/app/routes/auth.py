@@ -26,6 +26,12 @@ def register():
 
     return jsonify({'message': 'User created successfully'}), 201
 
+@auth_bp.route("/users", methods=['GET'])
+def get_users():
+    users = User.query.all()
+    res = [user.to_dict() for user in users]
+    return jsonify({'count': len(res), 'users': res}), 200
+
 @auth_bp.route("/login", methods=['POST'])
 def login():
     data = request.get_json()

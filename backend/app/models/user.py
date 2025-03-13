@@ -26,6 +26,14 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}, Email: {self.email}>'
     
+    def to_dict(self):
+        return {
+            'user_id': self.user_id,
+            'username': self.username,
+            'email': self.email,
+            'created_at': self.created_at
+        }
+    
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))

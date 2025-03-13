@@ -6,3 +6,5 @@ __pycache__/
 *.dll
 .DS_Store
 *.pth
+.yarn/
+.yarn*
