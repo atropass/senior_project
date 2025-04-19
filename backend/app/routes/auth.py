@@ -41,7 +41,7 @@ def login():
     if not user or not user.check_password(data.get('password')):
         return jsonify({'message': 'Invalid credentials'}), 401
 
-    access_token = create_access_token(identity=user.user_id)
+    access_token = create_access_token(identity=str(user.user_id))
 
     return jsonify({'access_token': access_token}), 200
 
@@ -49,6 +49,6 @@ def login():
 @jwt_required()
 def profile():
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = User.query.get(int(current_user_id))
 
     return jsonify({'user_id': user.user_id, 'user': user.username, 'email': user.email}), 200
