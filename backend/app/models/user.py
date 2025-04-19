@@ -12,6 +12,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
+    favorite_cards = db.relationship('Favorite', backref='user', lazy=True, cascade='all, delete-orphan')
+
     def __init__(self, username, email, password):
         self.username = username
         self.email = email

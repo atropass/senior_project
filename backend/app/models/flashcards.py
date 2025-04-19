@@ -16,6 +16,7 @@ class Flashcard(db.Model):
     audio = db.Column(db.String(256), nullable=False, default='default.wav')
 
     categories = db.relationship('Category', secondary=flashcard_categories, backref=db.backref('flashcards', lazy='dynamic'))
+    favorited_by = db.relationship('Favorite', backref='card', lazy=True)
 
     
     def __init__(self, word, eng_translation, rus_translation, phonetic):

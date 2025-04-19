@@ -29,12 +29,14 @@ def create_app(config_name='default') -> Flask:
     from app.routes.flashcards import flashcards_bp
     from app.routes.speech import speech_bp
     from app.routes.word_categories import categories_bp
+    from app.routes.favorites import favorites_bp
     # from app.routes.progress import progress_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(flashcards_bp, url_prefix='/api/flashcards')
     app.register_blueprint(speech_bp, url_prefix='/api/speech')
     app.register_blueprint(categories_bp, url_prefix='/api/categories')
+    app.register_blueprint(favorites_bp, url_prefix='/api/favorites')
     # app.register_blueprint(progress_bp, url_prefix='/api/progress')
 
     with app.app_context():
