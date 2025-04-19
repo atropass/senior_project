@@ -1,15 +1,10 @@
-import torch
 import numpy as np
-from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
-import librosa
 from scipy.signal import hilbert, find_peaks
 import Levenshtein
 
 
 class PronunciationAnalyzer:
-    def __init__(self, model, processor):
-        self.model = model
-        self.processor = processor
+    def __init__(self):
         self.similar_phonemes = {
             "қ": ["к", "х"],  # Similar sounds to қ
             "ғ": ["г"],  # Similar sounds to ғ
@@ -59,68 +54,30 @@ class PronunciationAnalyzer:
     ):
         """Enhanced pronunciation analysis"""
         try:
-            # Process audio through Wav2Vec2
-            inputs = self.processor(
-                waveform, sampling_rate=sample_rate, return_tensors="pt", padding=True
-            )
-
-            with torch.no_grad():
-                outputs = self.model(inputs.input_values)
-
-            # Get confidence scores and phoneme analysis
-            probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-            confidence_scores = torch.max(probs, dim=-1)[0].mean().item()
 
             # Calculate detailed phoneme analysis
             phoneme_analysis = self._analyze_phonemes(reference_text, predicted_text)
 
             # Get rhythm and timing metrics
             rhythm_metrics = self.calculate_rhythm_metrics(waveform, sample_rate)
-            timing_scores = self._analyze_timing(outputs.logits)
 
             # Calculate overall score with new weighting
             overall_score = self._calculate_overall_score(
-                confidence_scores,
                 phoneme_analysis["accuracy"],
-                timing_scores["timing_score"],
                 rhythm_metrics["rhythm_regularity"],
             )
 
             return {
                 "pronunciation_score": overall_score,
-                "confidence": confidence_scores,
                 "phoneme_analysis": phoneme_analysis,
-                "timing_scores": timing_scores,
                 "rhythm_metrics": rhythm_metrics,
                 "detailed_feedback": self._generate_feedback(
-                    overall_score, phoneme_analysis, timing_scores, rhythm_metrics
+                    overall_score, phoneme_analysis, rhythm_metrics
                 ),
             }
         except Exception as e:
             print(f"Error in analyze_pronunciation: {str(e)}")
             return self._get_default_analysis()
-
-    def _analyze_timing(self, logits):
-        """Analyze timing patterns"""
-        try:
-            attention_weights = torch.nn.functional.softmax(logits, dim=-1)
-            durations = attention_weights.sum(dim=1).tolist()
-
-            mean_duration = np.mean(durations)
-            std_duration = np.std(durations)
-
-            # Normalize timing score to be between -1 and 1
-            timing_score = 1.0 - (std_duration / (mean_duration + 1e-6))
-            timing_score = max(-1.0, min(1.0, timing_score))
-
-            return {
-                "timing_score": timing_score,
-                "mean_duration": mean_duration,
-                "std_duration": std_duration,
-            }
-        except Exception as e:
-            print(f"Error in analyze_timing: {str(e)}")
-            return {"timing_score": 0.0, "mean_duration": 0.0, "std_duration": 0.0}
 
     def calculate_rhythm_metrics(self, waveform, sample_rate):
         """Calculate rhythm-related metrics"""
@@ -175,7 +132,7 @@ class PronunciationAnalyzer:
             analysis["accuracy"] = 100.0
             return analysis
         
-        print(matrix)
+        # print(matrix)
         source_modified = set()
         dest_modified = set()
 
@@ -255,18 +212,13 @@ class PronunciationAnalyzer:
         return analysis
 
     def _calculate_overall_score(
-        self, confidence, phoneme_accuracy, timing_score, rhythm_regularity
+        self, phoneme_accuracy, rhythm_regularity
     ):
         """Calculate overall pronunciation score with new weighting"""
         weights = {
-            "phoneme_accuracy": 0.4,
-            "confidence": 0.3,
-            "timing": 0.15,
-            "rhythm": 0.15,
+            "phoneme_accuracy": 0.5,
+            "rhythm": 0.5,
         }
-
-        # Convert timing_score from [-1, 1] to [0, 100]
-        timing_score = (timing_score + 1) * 50
 
         # Convert rhythm_regularity to a score (lower regularity is better)
         rhythm_score = max(0, min(100, (1 - rhythm_regularity) * 100))
@@ -274,15 +226,13 @@ class PronunciationAnalyzer:
         # Calculate weighted score
         overall_score = (
             weights["phoneme_accuracy"] * phoneme_accuracy
-            + weights["confidence"] * (confidence * 100)
-            + weights["timing"] * timing_score
             + weights["rhythm"] * rhythm_score
         )
 
         return max(0, min(100, overall_score))
 
     def _generate_feedback(
-        self, score, phoneme_analysis, timing_scores, rhythm_metrics
+        self, score, phoneme_analysis, rhythm_metrics
     ):
         """Generate detailed feedback"""
         feedback = []
@@ -319,11 +269,6 @@ class PronunciationAnalyzer:
                 elif "extra" in p:
                     feedback.append(f"- Extra sound '{p['extra']}' was added")
 
-        # Timing feedback
-        if timing_scores["timing_score"] < 0:
-            feedback.append("\nTiming:")
-            feedback.append("- Work on maintaining consistent timing between sounds")
-
         # Rhythm feedback
         if rhythm_metrics["speech_rate"] > 4.0:
             feedback.append("\nPace:")
@@ -334,7 +279,5 @@ class PronunciationAnalyzer:
         return feedback
 
 
-def setup_analyzer(model_name):
-    processor = Wav2Vec2Processor.from_pretrained(model_name)
-    model = Wav2Vec2ForCTC.from_pretrained(model_name)
-    return PronunciationAnalyzer(model, processor)
+def setup_analyzer():
+    return PronunciationAnalyzer()
