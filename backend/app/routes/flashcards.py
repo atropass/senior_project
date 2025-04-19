@@ -1,8 +1,13 @@
 from flask import Blueprint, request, jsonify
+from app.utils.get_next_due_card import get_next_flashcard_for_user_by_category
+
 from app import db
 from sqlalchemy.exc import IntegrityError
+
+from app.models.category import Category
 from app.models.flashcards import Flashcard
 from app.routes.word_categories import get_flashcards_by_category
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 flashcards_bp = Blueprint('flashcards', __name__)
 
@@ -24,13 +29,16 @@ def create_flashcard():
                     'success': False,
                     'error': f'Missing required field: {field}'
                 }), 400
-        
+
+        current_user_id = get_jwt_identity()
+
         # Create new flashcard
         new_card = Flashcard(
             word=data['word'],
             eng_translation=data['eng_translation'],
             rus_translation=data['rus_translation'],
-            phonetic=data['phonetic']
+            phonetic=data['phonetic'],
+            created_by_user_id=int(current_user_id)
         )
         
         # Handle optional fields
@@ -50,7 +58,7 @@ def create_flashcard():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': str(e)}), 500
-    
+
 @flashcards_bp.route("/<int:word_id>", methods=['GET'])
 def get_flashcard_by_id(word_id):
     flashcard = Flashcard.query.get(word_id)
@@ -91,7 +99,7 @@ def update_flashcard(word_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': str(e)}), 500
-    
+
 @flashcards_bp.route("/<int:word_id>", methods=['DELETE'])
 def delete_flashcard(word_id):
     flashcard = Flashcard.query.get(word_id)
@@ -104,3 +112,14 @@ def delete_flashcard(word_id):
 @flashcards_bp.route("/categories/<int:category_id>", methods=['GET'])
 def get_flashcards_by_category_alias(category_id):
     return get_flashcards_by_category(category_id)
+
+@flashcards_bp.route("/categories/<int:category_id>/next-card", methods=['GET'])
+@jwt_required()
+def get_next_flashcard_by_category_id(category_id):
+    current_user_id = get_jwt_identity()
+    user_flashcard, flashcard = get_next_flashcard_for_user_by_category(current_user_id, category_id)
+
+    if flashcard is None:
+        return jsonify({'message': 'No flashcards found'}), 404
+
+    return jsonify({'flashcard': flashcard.to_dict()}), 200

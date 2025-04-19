@@ -1,6 +1,7 @@
 from app import db
 from app.models.flashcards import Flashcard
 from app.models.category import Category
+from app.models.user import User
 import logging
 
 def seed_database():
@@ -47,10 +48,14 @@ def seed_database():
         {"word": "күн", "eng_translation": "sun/day", "rus_translation": "солнце/день", "phonetic": "kyn", "categories": ["General"]},
     ]
 
+    first_user = User("first_user", "first_user_email@gmail.com", "super-strong-password")
+    db.session.add(first_user)
+    db.session.commit()
+
     for card in KAZAKH_WORDS:
         card_categories = card.pop('categories')
 
-        new_card = Flashcard(**card)
+        new_card = Flashcard(**card, created_by_user_id=first_user.user_id)
         for category_name in card_categories:
             new_card.categories.append(category_objects[category_name])
 

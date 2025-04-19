@@ -1,6 +1,6 @@
 from app import db
 from app.models.associations import flashcard_categories
-from app.models.category import Category
+from datetime import datetime, timezone
 
 class Flashcard(db.Model):
     __tablename__ = 'flashcards'
@@ -16,14 +16,17 @@ class Flashcard(db.Model):
     audio = db.Column(db.String(256), nullable=False, default='default.wav')
 
     categories = db.relationship('Category', secondary=flashcard_categories, backref=db.backref('flashcards', lazy='dynamic'))
-    favorited_by = db.relationship('Favorite', backref='card', lazy=True)
+
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     
-    def __init__(self, word, eng_translation, rus_translation, phonetic):
+    def __init__(self, word, eng_translation, rus_translation, phonetic, created_by_user_id):
         self.word = word
         self.eng_translation = eng_translation
         self.rus_translation = rus_translation
         self.phonetic = phonetic
+        self.created_by_user_id = created_by_user_id
         
         # These are just for convenience/representation, not database columns
         self.front = word
