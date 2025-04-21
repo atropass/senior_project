@@ -10,3 +10,4 @@ __pycache__/
 .yarn*
 myenv/
 *copy.txt
+.env
