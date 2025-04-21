@@ -96,9 +96,10 @@ def get_correct_pronounciation():
     
     reference_text_eng = flashcard.eng_translation
     reference_text_rus = flashcard.rus_translation
+    reference_text_kaz = flashcard.word
 
     try:
-        res = get_pronunciation(reference_text_eng)
+        res = get_pronunciation(reference_text_kaz)
         return jsonify({'text': res['text'], 'base16_audio': res['audio']}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

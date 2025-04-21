@@ -17,8 +17,8 @@ def get_pronunciation(word: str):
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
-        data={
-            "source_language": "en",
+        json={
+            "source_language": "kaz",
             "target_language": "kaz",
             "text": word
         }
