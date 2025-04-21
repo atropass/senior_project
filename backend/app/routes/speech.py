@@ -7,6 +7,7 @@ from app.models.user_flashcards import UserFlashcard
 from app.models.user_progress import UserProgress
 from app.models.flashcards import Flashcard
 from app.utils.speech_recognition import analyze_audio
+from app.utils.text_to_speech import get_pronunciation
 
 speech_bp = Blueprint('speech', __name__)
 
@@ -76,5 +77,28 @@ def analyze_speech():
     except ValueError as ve:
         return jsonify({'error': str(ve)}), 400
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@speech_bp.route('/pronounce', methods=['POST'])
+@jwt_required()
+def get_correct_pronounciation():
+    data = request.get_json()
+    word_id = data['word_id']
+
+    if not word_id:
+        return jsonify({'error': 'Missing word_id in request'}), 400
+    
+    flashcard = Flashcard.query.get(word_id)
+    if not flashcard:
+        return jsonify({'error': 'Flashcard not found'}), 404
+    
+    reference_text_eng = flashcard.eng_translation
+    reference_text_rus = flashcard.rus_translation
+
+    try:
+        res = get_pronunciation(reference_text_eng)
+        return jsonify({'text': res['text'], 'base16_audio': res['audio']}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
