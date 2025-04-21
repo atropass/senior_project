@@ -10,6 +10,8 @@ class UserProgress(db.Model):
     score = db.Column(db.Float, default=50.0)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
+    flashcard = db.relationship("Flashcard", backref="progress_entries")
+
     def __init__(self, user_id, flashcard_id, score):
         self.user_id = user_id
         self.flashcard_id = flashcard_id

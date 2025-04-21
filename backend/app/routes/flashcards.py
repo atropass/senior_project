@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify
+
+from app.models.user_progress import UserProgress
 from app.utils.get_next_due_card import get_next_flashcard_for_user_by_category
 
 from app import db
@@ -8,6 +10,8 @@ from app.models.category import Category
 from app.models.flashcards import Flashcard
 from app.routes.word_categories import get_flashcards_by_category
 from flask_jwt_extended import jwt_required, get_jwt_identity
+
+from datetime import datetime, timezone
 
 flashcards_bp = Blueprint('flashcards', __name__)
 
@@ -123,3 +127,50 @@ def get_next_flashcard_by_category_id(category_id):
         return jsonify({'message': 'No flashcards found'}), 404
 
     return jsonify({'flashcard': flashcard.to_dict()}), 200
+
+@flashcards_bp.route("/history", methods=['GET'])
+@jwt_required()
+def get_flashcard_progress():
+    current_user_id = get_jwt_identity()
+
+    date_format = "%Y-%m-%d"
+    created_from_str = request.args.get('created_from')
+    created_to_str = request.args.get('created_to')
+
+    try:
+        created_from = datetime.strptime(created_from_str, date_format) if created_from_str else datetime.min.replace(tzinfo=timezone.utc)
+        created_to = datetime.strptime(created_to_str, date_format) if created_to_str else datetime.max.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    from_score = request.args.get('from_score', type=float, default=0.0)
+    to_score = request.args.get('to_score', type=float, default=100.0)
+    flashcard_ids = request.args.getlist('flashcards', type=int)
+    category_ids = request.args.getlist('categories', type=int)
+
+    query = UserProgress.query.join(Flashcard).filter(
+        UserProgress.user_id == current_user_id,
+        UserProgress.score >= from_score,
+        UserProgress.score <= to_score,
+        UserProgress.created_at >= created_from,
+        UserProgress.created_at <= created_to,
+    )
+
+    if flashcard_ids:
+        query = query.filter(UserProgress.flashcard_id.in_(flashcard_ids))
+
+    if category_ids:
+        query = query.filter(
+            Flashcard.categories.any(Category.category_id.in_(category_ids))
+        )
+
+    results = query.all()
+
+    return jsonify([
+        {
+            "progress_id": progress.id,
+            "score": progress.score,
+            "created_at": progress.created_at.isoformat(),
+            "flashcard": progress.flashcard.to_dict()
+        } for progress in results
+    ])
