@@ -10,3 +10,5 @@ __pycache__/
 .yarn*
 myenv/
 *copy.txt
+backend/flask.log
+backend/insntance/app.db
