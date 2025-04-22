@@ -11,5 +11,7 @@ __pycache__/
 myenv/
 *copy.txt
 backend/flask.log
-backend/insntance/app.db
+backend/instance/app.db
 backend/.idea
+app.db
+.env
