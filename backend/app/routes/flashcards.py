@@ -22,6 +22,7 @@ def get_flashcards():
     return jsonify({'count': len(res), 'flashcards': res}), 200
 
 @flashcards_bp.route("/", methods=['POST'])
+@jwt_required()
 def create_flashcard():
     try:
         data = request.get_json()
@@ -42,7 +43,7 @@ def create_flashcard():
             eng_translation=data['eng_translation'],
             rus_translation=data['rus_translation'],
             phonetic=data['phonetic'],
-            created_by_user_id=int(current_user_id)
+            created_by_user_id=current_user_id,
         )
         
         # Handle optional fields
@@ -50,6 +51,10 @@ def create_flashcard():
             new_card.picture = data['picture']
         if 'audio' in data:
             new_card.audio = data['audio']
+
+        if 'category' in data:
+            categories = Category.query.filter_by(name=data['category']).first()
+            new_card.categories = [categories]
         
         # Add to database
         db.session.add(new_card)
