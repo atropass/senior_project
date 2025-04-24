@@ -64,7 +64,15 @@ def analyze_speech():
         user_progress = UserProgress(
             user_id=int(current_user_id),
             flashcard_id=word_index,
-            score=accuracy
+            accuracy=accuracy,
+            correct_phonemes=result["phoneme_analysis"]["correct_phonemes"],
+            total_phonemes=result["phoneme_analysis"]["total_phonemes"],
+            phoneme_details=result["phoneme_analysis"]["phoneme_details"],
+            predicted_text=result["predicted_text"],
+            pronunciation_score=result["pronunciation_score"],
+            reference_text=result["reference_text"],
+            rhythm_regularity=result["rhythm_metrics"]["rhythm_regularity"],
+            speech_rate=result["rhythm_metrics"]["speech_rate"]
         )
         db.session.add(user_progress)
 
