@@ -137,6 +137,7 @@ def get_next_flashcard_by_category_id(category_id):
 @jwt_required()
 def get_flashcard_progress():
     current_user_id = get_jwt_identity()
+    print(current_user_id)
 
     date_format = "%Y-%m-%d"
     created_from_str = request.args.get('created_from')
@@ -155,8 +156,8 @@ def get_flashcard_progress():
 
     query = UserProgress.query.join(Flashcard).filter(
         UserProgress.user_id == current_user_id,
-        UserProgress.score >= from_score,
-        UserProgress.score <= to_score,
+        UserProgress.accuracy >= from_score,
+        UserProgress.accuracy <= to_score,
         UserProgress.created_at >= created_from,
         UserProgress.created_at <= created_to,
     )
@@ -174,7 +175,7 @@ def get_flashcard_progress():
     return jsonify([
         {
             "progress_id": progress.id,
-            "score": progress.score,
+            "score": progress.accuracy,
             "created_at": progress.created_at.isoformat(),
             "flashcard": progress.flashcard.to_dict()
         } for progress in results
