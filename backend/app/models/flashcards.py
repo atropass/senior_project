@@ -6,10 +6,8 @@ class Flashcard(db.Model):
     __tablename__ = 'flashcards'
     
     word_id = db.Column(db.Integer, primary_key=True)
-    # Card front
     word = db.Column(db.String(64), nullable=False, unique=True)
     picture = db.Column(db.String(256), default='default.jpg')
-    # Card back
     eng_translation = db.Column(db.String(64))
     rus_translation = db.Column(db.String(64))
     phonetic = db.Column(db.String(64), nullable=False)
@@ -37,7 +35,7 @@ class Flashcard(db.Model):
         }
         
     def __repr__(self):
-        return f'<Flashcard {self.front} - {self.back}>'
+        return f'<Flashcard {self.word} - {self.phonetic}>'
     
     def to_dict(self):
         return {

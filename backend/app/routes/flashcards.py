@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
-
 from app.models.user_progress import UserProgress
-from app.utils.get_next_due_card import get_next_flashcard_for_user_by_category
+from app.utils.get_next_due_card import get_next_flashcard_for_user_by_category, get_next_flashcard_for_user
 
 from app import db
 from sqlalchemy.exc import IntegrityError
@@ -127,6 +126,17 @@ def get_flashcards_by_category_alias(category_id):
 def get_next_flashcard_by_category_id(category_id):
     current_user_id = get_jwt_identity()
     user_flashcard, flashcard = get_next_flashcard_for_user_by_category(current_user_id, category_id)
+
+    if flashcard is None:
+        return jsonify({'message': 'No flashcards found'}), 404
+
+    return jsonify({'flashcard': flashcard.to_dict()}), 200
+
+@flashcards_bp.route("/next-card", methods=['GET'])
+@jwt_required()
+def get_next_flashcard():
+    current_user_id = get_jwt_identity()
+    user_flashcard, flashcard = get_next_flashcard_for_user(current_user_id)
 
     if flashcard is None:
         return jsonify({'message': 'No flashcards found'}), 404
