@@ -7,6 +7,8 @@ from app.models.associations import flashcard_categories
 
 
 def get_next_flashcard_for_user_by_category(user_id, category_id):
+    now = datetime.now(timezone.utc)
+
     result = (
         db.session.query(UserFlashcard, Flashcard)
         .join(Flashcard, Flashcard.word_id == UserFlashcard.flashcard_id)
@@ -14,6 +16,7 @@ def get_next_flashcard_for_user_by_category(user_id, category_id):
         .join(Category, Category.category_id == flashcard_categories.c.category_id)
         .filter(UserFlashcard.user_id == user_id)
         .filter(Category.category_id == category_id)
+        .filter(UserFlashcard.next_review <= now)
         .order_by(UserFlashcard.next_review.asc())
         .first()
     )
@@ -48,11 +51,14 @@ def get_next_flashcard_for_user_by_category(user_id, category_id):
     return None, None
 
 def get_next_flashcard_for_user(user_id):
+    now = datetime.now(timezone.utc)
+
     # Step 1: Try to find a due UserFlashcard that belongs to the given category
     result = (
         db.session.query(UserFlashcard, Flashcard)
         .join(Flashcard, Flashcard.word_id == UserFlashcard.flashcard_id)
         .filter(UserFlashcard.user_id == user_id)
+        .filter(UserFlashcard.next_review <= now)
         .order_by(UserFlashcard.next_review.asc())
         .first()
     )
