@@ -202,7 +202,7 @@ class PronunciationAnalyzer:
                 )
 
         # Need to preserve letter order
-        analysis['phoneme_details'] = sorted(analysis['phoneme_details'], key=lambda x: ref_text.index(x['phoneme']))
+        # analysis['phoneme_details'] = sorted(analysis['phoneme_details'], key=lambda x: ref_text.index(x['phoneme']))
 
         # Calculate overall accuracy
         analysis["accuracy"] = (
